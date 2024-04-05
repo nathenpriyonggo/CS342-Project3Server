@@ -93,9 +93,13 @@ public class Server{
 					
 				 while(true) {
 					    try {
-					    	String data = in.readObject().toString();
-					    	callback.accept("client: " + count + " sent: " + data);
-					    	updateClients("client #"+count+" said: "+data);
+							Message msg = (Message) in.readObject();
+							callback.accept(msg.username + ": " + msg.chat);
+							updateClients(msg.username + "= " + msg.chat);
+
+//					    	String data = in.readObject().toString();
+//					    	callback.accept("client: " + count + " sent: " + data);
+//					    	updateClients("client #"+count+" said: "+data);
 					    	
 					    	}
 					    catch(Exception e) {

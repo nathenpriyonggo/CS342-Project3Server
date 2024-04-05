@@ -27,6 +27,7 @@ public class GuiServer extends Application{
 	Server serverConnection;
 	
 	ListView<String> listItems, listItems2;
+
 	
 	
 	public static void main(String[] args) {
@@ -34,8 +35,12 @@ public class GuiServer extends Application{
 	}
 
 	@Override
-	public void start(Stage primaryStage) throws Exception {
+	public void start(Stage primaryStage) {
 
+		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Regular.ttf"), 14);
+		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Medium.ttf"), 14);
+		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Semibold.ttf"), 14);
+		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Bold.ttf"), 14);
 
 		serverConnection = new Server(data -> {
 			Platform.runLater(()->{
@@ -66,23 +71,16 @@ public class GuiServer extends Application{
 	
 	public Scene createServerGui() {
 
-		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Regular.ttf"), 14);
-		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Medium.ttf"), 14);
-		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Semibold.ttf"), 14);
-		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Bold.ttf"), 14);
 
-        BorderPane pane = new BorderPane();
+		VBox paneVertical = new VBox(10, listItems);
+		paneVertical.setStyle("-fx-font-family: 'gg sans Semibold'");
+
+
+		BorderPane pane = new BorderPane();
 		pane.setPadding(new Insets(70));
-		pane.setStyle("-fx-background-color: coral;" + "-fx-font-family: 'gg sans Bold'");
-
-		ToggleButton toggleButton = new ToggleButton("Toggle me");
-
-
-		VBox paneVertical = new VBox(10, toggleButton, listItems);
+		pane.setStyle("-fx-background-color: white;" + "-fx-font-family: 'gg sans Bold'");
         pane.setCenter(paneVertical);
 
-		return new Scene(pane, 600, 600);
+		return new Scene(pane, 600, 400);
 	}
-
-
 }
