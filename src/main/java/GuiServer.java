@@ -23,13 +23,11 @@ import javafx.collections.ObservableList;
 
 public class GuiServer extends Application{
 
-	HashMap<String, Scene> sceneMap;
 	Server serverConnection;
-	
 	ListView<String> listItems, listItems2;
 
-	
-	
+
+
 	public static void main(String[] args) {
 		launch(args);
 	}
@@ -37,6 +35,7 @@ public class GuiServer extends Application{
 	@Override
 	public void start(Stage primaryStage) {
 
+		// Discord-style fonts
 		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Regular.ttf"), 14);
 		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Medium.ttf"), 14);
 		Font.loadFont(getClass().getResourceAsStream("gg-sans-2/gg sans Semibold.ttf"), 14);
@@ -48,13 +47,9 @@ public class GuiServer extends Application{
 			});
 		});
 
-		
 		listItems = new ListView<String>();
 
-		sceneMap = new HashMap<String, Scene>();
-		
-		sceneMap.put("server",  createServerGui());
-		
+
 		primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
             @Override
             public void handle(WindowEvent t) {
@@ -63,14 +58,12 @@ public class GuiServer extends Application{
             }
         });
 
-		primaryStage.setScene(sceneMap.get("server"));
-		primaryStage.setTitle("This is the Server");
+		primaryStage.setScene(createServerGui());
+		primaryStage.setTitle("Text-it Server");
 		primaryStage.show();
-		
 	}
-	
-	public Scene createServerGui() {
 
+	public Scene createServerGui() {
 
 		VBox paneVertical = new VBox(10, listItems);
 		paneVertical.setStyle("-fx-font-family: 'gg sans Semibold'");
