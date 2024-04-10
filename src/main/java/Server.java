@@ -161,7 +161,7 @@ public class Server{
 					System.out.println("Streams not open");
 				}
 
-				//while (!checkUniqueName()) {}
+				while (!checkUniqueName()) {}
 				System.out.println("we pass");
 
 				// Receive new client's name
