@@ -61,6 +61,7 @@ public class Server{
 			ObjectOutputStream out;
 			String clientThreadName;
 			boolean online = false;
+			boolean uniqueName = false;
 			
 			ClientThread(Socket s, int count){
 				this.connection = s;
@@ -71,17 +72,25 @@ public class Server{
                 for (int i = 0; i < clients.size(); i++) {
                     ClientThread t = clients.get(i);
                     try {
-                        t.out.writeObject(new Message(t.clientThreadName, null, data, "isPublicText"));
+                        t.out.writeObject(new Message(t.clientThreadName, null,
+								data, "isPublicText"));
                     } catch (Exception e) {}
                 }
 			}
 
 			public void privateSend(String receiver, String data) {
-				for (int i = 0; i < clients.size(); i++) {
+
+				try {
+					out.writeObject(new Message(clientThreadName, null,
+							data, "isPrivateText"));
+				} catch (Exception e) {}
+
+                for (int i = 0; i < clients.size(); i++) {
 					ClientThread t = clients.get(i);
 					if (Objects.equals(t.clientThreadName, receiver)) {
 						try {
-							t.out.writeObject(new Message(t.clientThreadName, null, data, "isPrivateText"));
+							t.out.writeObject(new Message(t.clientThreadName, null,
+									data, "isPrivateText"));
 							break;
 						} catch (Exception e) {}
 					}
@@ -93,7 +102,8 @@ public class Server{
                     ClientThread t = clients.get(i);
                     try {
 						if (t.online) {
-							t.out.writeObject(new Message(username, null, data, "isUpdateFriends"));
+							t.out.writeObject(new Message(username, null,
+									data, "isUpdateFriends"));
 						}
                     } catch (Exception e) {}
                 }
@@ -104,10 +114,39 @@ public class Server{
                     String friend = friends.get(i);
                     try {
 						if (!Objects.equals(friend, clientThreadName)) {
-							out.writeObject(new Message(friend, null, "addFriend", "isUpdateFriends"));
+							out.writeObject(new Message(friend, null,
+									"addFriend", "isUpdateFriends"));
 						}
                     } catch (Exception e) {}
                 }
+			}
+
+			public boolean checkUniqueName() {
+				Message msg = null;
+				try {
+					msg = (Message) in.readObject();
+				} catch (Exception e) {}
+
+				if (!friends.isEmpty()) {
+					for (String friendName : friends) {
+						if (Objects.equals(msg.getUsername(), friendName)) {
+							try {
+								out.writeObject(new Message(msg.getUsername(), "",
+										"false", "isCheckUniqueName"));
+							} catch (Exception e) {
+							}
+							return false;
+						}
+					}
+				}
+
+				System.out.println("we did chekc" + msg.getUsername());
+				try {
+					out.writeObject(new Message(msg.getUsername(), "",
+							"true", "isCheckUniqueName"));
+				} catch (Exception e) {}
+
+				return true;
 			}
 			
 			public void run(){
@@ -122,17 +161,18 @@ public class Server{
 					System.out.println("Streams not open");
 				}
 
+				//while (!checkUniqueName()) {}
+				System.out.println("we pass");
+
 				// Receive new client's name
-                Message msg = null;
-                try {
-                    msg = (Message) in.readObject();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+				Message msg = null;
+				try {
+					msg = (Message) in.readObject();
+				} catch (Exception e) {}
 
 				// Send new client's name
-                if (msg.isInfoName()) {
-
+				if (msg.isInfoName()) {
+					System.out.println("we passinside infoname");
 					String textInfo = ">> " + msg.getUsername() + " just dropped by!";
 					callback.accept(textInfo);
 					updateClients(textInfo);
@@ -144,20 +184,20 @@ public class Server{
 					clientThreadName = msg.getUsername();
 					friends.add(clientThreadName);
 				}
+
 					
 				 while(true) {
 					    try {
 							msg = (Message) in.readObject();
 							String textChat = "";
 							if (msg.isPublicText()) {
-								textChat = "[Public] > " + msg.getUsername() + ": " + msg.getData();
+								textChat = msg.getUsername() + " > [Public]: " + msg.getData();
 								updateClients(textChat);
-								textChat = "[" + msg.getUsername() + "] > [Public] ~ " + msg.getData();
 							}
 							else if (msg.isPrivateText()) {
-								textChat = "[Private] > " + msg.getUsername() + ": " + msg.getData();
+								textChat = msg.getUsername() + " > [" + msg.getReceiver() +
+										"]: " + msg.getData();
 								privateSend(msg.getReceiver(), textChat);
-								textChat = "[" + msg.getUsername() + "] > [" + msg.getReceiver() + "] ~ " + msg.getData();
 							}
 							callback.accept(textChat);
 						}
