@@ -12,72 +12,88 @@ import javafx.application.Platform;
 import javafx.scene.control.ListView;
 
 
+/*
+Server class
+ */
 public class Server{
 
-	int count = 1;	
 	ArrayList<ClientThread> clients = new ArrayList<ClientThread>();
 	ArrayList<String> friends = new ArrayList<>();
 	TheServer server;
 	private Consumer<Serializable> callback;
 	
-	
+	/*
+	Default constructor
+	 */
 	Server(Consumer<Serializable> call){
 	
 		callback = call;
 		server = new TheServer();
 		server.start();
 	}
-	
-	
+
+
+	/*
+	Server thread class
+	 */
 	public class TheServer extends Thread{
 		
 		public void run() {
 		
 			try(ServerSocket mysocket = new ServerSocket(5555);){
-		    System.out.println("Server is waiting for a client!");
 			
 		    while(true) {
 		
-				ClientThread c = new ClientThread(mysocket.accept(), count);
+				ClientThread c = new ClientThread(mysocket.accept());
 				clients.add(c);
 				c.start();
-				
-				count++;
 			    }
 			}//end of try
 				catch(Exception e) {
-					callback.accept("Server socket did not launch");
+					Message callMsg = new Message("","",
+							"--- Server socket did not launch ---", "");
+					callback.accept(callMsg);
 				}
 			}//end of while
 		}
 	
 
+		/*
+		Client thread class
+		 */
 		class ClientThread extends Thread{
 
 		
 			Socket connection;
-			int count;
 			ObjectInputStream in;
 			ObjectOutputStream out;
 			String clientThreadName;
 			boolean online = false;
-			boolean uniqueName = false;
-			
-			ClientThread(Socket s, int count){
+
+			/*
+			Default constructor
+			 */
+			ClientThread(Socket s){
 				this.connection = s;
-				this.count = count;	
 			}
-			
-			public void updateClients(String data) {
+
+
+			/*
+			Helper Functions
+			 */
+
+			// Update all clients, public chat
+			public void updateClients(String data, String flag) {
                 for (int i = 0; i < clients.size(); i++) {
                     ClientThread t = clients.get(i);
                     try {
                         t.out.writeObject(new Message(t.clientThreadName, null,
-								data, "isPublicText"));
+								data, flag));
                     } catch (Exception e) {}
                 }
 			}
 
+			// Update specific client, private chat
 			public void privateSend(String receiver, String data) {
 
 				try {
@@ -97,6 +113,7 @@ public class Server{
 				}
 			}
 
+			// Update all clients profile_friends with new incoming client
 			public void updateClientsArrayLists(String username, String data) {
                 for (int i = 0; i < clients.size(); i++) {
                     ClientThread t = clients.get(i);
@@ -109,6 +126,7 @@ public class Server{
                 }
 			}
 
+			// Update the new client to be up-to-date with all known clients/friends
 			public void updateNewClientFriendListUptoDate() {
                 for (int i = 0; i < friends.size(); i++) {
                     String friend = friends.get(i);
@@ -121,6 +139,7 @@ public class Server{
                 }
 			}
 
+			// Return true if is unique name, false otherwise
 			public boolean checkUniqueName() {
 				Message msg = null;
 				try {
@@ -140,7 +159,6 @@ public class Server{
 					}
 				}
 
-				System.out.println("we did chekc" + msg.getUsername());
 				try {
 					out.writeObject(new Message(msg.getUsername(), "",
 							"true", "isCheckUniqueName"));
@@ -148,7 +166,8 @@ public class Server{
 
 				return true;
 			}
-			
+
+
 			public void run(){
 
 				// Define new input and output streams
@@ -161,8 +180,9 @@ public class Server{
 					System.out.println("Streams not open");
 				}
 
+				// Loop until unique name found
 				while (!checkUniqueName()) {}
-				System.out.println("we pass");
+
 
 				// Receive new client's name
 				Message msg = null;
@@ -172,10 +192,13 @@ public class Server{
 
 				// Send new client's name
 				if (msg.isInfoName()) {
-					System.out.println("we passinside infoname");
-					String textInfo = ">> " + msg.getUsername() + " just dropped by!";
-					callback.accept(textInfo);
-					updateClients(textInfo);
+
+					String textInfo = "-- " + msg.getUsername() + " just dropped by! --";
+					Message callMsg = new Message("", "",
+							textInfo, "isInfoName");
+
+					callback.accept(callMsg);
+					updateClients(textInfo, "isInfoName");
 
 					updateNewClientFriendListUptoDate();
 					online = true;
@@ -185,25 +208,37 @@ public class Server{
 					friends.add(clientThreadName);
 				}
 
-					
-				 while(true) {
+				// Continuously receive input
+				while(true) {
 					    try {
 							msg = (Message) in.readObject();
+
+
 							String textChat = "";
+							// Input message is public text
 							if (msg.isPublicText()) {
 								textChat = msg.getUsername() + " > [Public]: " + msg.getData();
-								updateClients(textChat);
+								updateClients(textChat, "isPublicText");
 							}
+							// Input message is private text
 							else if (msg.isPrivateText()) {
 								textChat = msg.getUsername() + " > [" + msg.getReceiver() +
 										"]: " + msg.getData();
 								privateSend(msg.getReceiver(), textChat);
 							}
-							callback.accept(textChat);
+							Message callMsg = new Message("","",
+									textChat,"isPublicText");
+							callback.accept(callMsg);
 						}
+						// Client got disconnected
 					    catch(Exception e) {
-					    	callback.accept(">> "+ clientThreadName + " just left the server!");
-					    	updateClients(">> "+ clientThreadName +" has left the server!");
+
+							String leftServerText = "-- " + clientThreadName + " has left the server! --";
+							Message callMsg = new Message("","",
+									leftServerText,"");
+
+					    	callback.accept(callMsg);
+					    	updateClients(leftServerText, "");
 
 							updateClientsArrayLists(clientThreadName, "removeFriend");
 							friends.remove(clientThreadName);
