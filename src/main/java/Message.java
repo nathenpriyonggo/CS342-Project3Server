@@ -42,5 +42,9 @@ public class Message implements Serializable {
     public boolean isPrivateText() {return (Objects.equals(flag, "isPrivateText"));}
     // Returns true if flag equals to isUpdateFriends, false otherwise
     public boolean isUpdateFriends() {return (Objects.equals(flag, "isUpdateFriends"));}
+    // Returns true if flag equals to isNewGroupAddMember
+    public boolean isNewGroupAddMember() {return (Objects.equals(flag, "isNewGroupAddMember"));}
+    // Returns true if flag equals to isNewGroup
+    public boolean isUpdateGroupList() {return (Objects.equals(flag, "isUpdateGroupList"));}
 
 }

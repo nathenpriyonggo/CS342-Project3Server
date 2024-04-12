@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -19,6 +20,7 @@ public class Server{
 
 	ArrayList<ClientThread> clients = new ArrayList<ClientThread>();
 	ArrayList<String> friends = new ArrayList<>();
+	HashMap<String, ArrayList<String>> groups = new HashMap<>();
 	TheServer server;
 	private Consumer<Serializable> callback;
 	
@@ -167,6 +169,23 @@ public class Server{
 				return true;
 			}
 
+			// Update groups
+			public void updateGroups(Message msg) {
+				String groupName = msg.getData();
+				// Existing group, add new member
+				if (groups.containsKey(groupName)) {
+					groups.get(msg.getData()).add(msg.getUsername());
+				}
+				// New group, add group and add new member
+				else {
+					ArrayList<String> newGroupArray = new ArrayList<>();
+					newGroupArray.add(msg.getUsername());
+					groups.put(msg.getData(), newGroupArray);
+
+					updateClients(msg.getData(), "isUpdateGroupList");
+				}
+			}
+
 
 			public void run(){
 
@@ -213,22 +232,29 @@ public class Server{
 					    try {
 							msg = (Message) in.readObject();
 
-
-							String textChat = "";
-							// Input message is public text
-							if (msg.isPublicText()) {
-								textChat = msg.getUsername() + " > [Public]: " + msg.getData();
-								updateClients(textChat, "isPublicText");
+							// Input message is notification about new group with new members
+							if (msg.isNewGroupAddMember()) {
+								System.out.println("did new roup");
+								updateGroups(msg);
 							}
-							// Input message is private text
-							else if (msg.isPrivateText()) {
-								textChat = msg.getUsername() + " > [" + msg.getReceiver() +
-										"]: " + msg.getData();
-								privateSend(msg.getReceiver(), textChat);
+							else {
+								String textChat = "";
+								// Input message is public text
+								if (msg.isPublicText()) {
+									textChat = msg.getUsername() + " > [Public]: " + msg.getData();
+									updateClients(textChat, "isPublicText");
+								}
+								// Input message is private text
+								else if (msg.isPrivateText()) {
+									textChat = msg.getUsername() + " > [" + msg.getReceiver() +
+											"]: " + msg.getData();
+									privateSend(msg.getReceiver(), textChat);
+								}
+								// Send message to Gui Server
+								Message callMsg = new Message("", "",
+										textChat, "isPublicText");
+								callback.accept(callMsg);
 							}
-							Message callMsg = new Message("","",
-									textChat,"isPublicText");
-							callback.accept(callMsg);
 						}
 						// Client got disconnected
 					    catch(Exception e) {
