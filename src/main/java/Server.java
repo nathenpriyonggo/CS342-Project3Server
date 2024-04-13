@@ -97,7 +97,6 @@ public class Server{
 
 			// Update specific client, private chat
 			public void privateSend(String receiver, String data) {
-
 				try {
 					out.writeObject(new Message(clientThreadName, null,
 							data, "isPrivateText"));
@@ -115,6 +114,23 @@ public class Server{
 				}
 			}
 
+			// Update specific clients based on groups, group chat
+			public void groupSend(String group, String data) {
+				ArrayList<String> groupList = groups.get(group);
+				for (String friend : groupList) {
+                    for (ClientThread t : clients) {
+                        if (Objects.equals(t.clientThreadName, friend)) {
+                            try {
+                                t.out.writeObject(new Message(t.clientThreadName, null,
+                                        data, "isGroupText"));
+                                break;
+                            } catch (Exception e) {
+                            }
+                        }
+                    }
+				}
+			}
+
 			// Update all clients profile_friends with new incoming client
 			public void updateClientsArrayLists(String username, String data) {
                 for (int i = 0; i < clients.size(); i++) {
@@ -128,8 +144,8 @@ public class Server{
                 }
 			}
 
-			// Update the new client to be up-to-date with all known clients/friends
-			public void updateNewClientFriendListUptoDate() {
+			// Update the new client to be up-to-date with all known clients/friends/groups
+			public void updateNewClientListsUptoDate() {
                 for (int i = 0; i < friends.size(); i++) {
                     String friend = friends.get(i);
                     try {
@@ -139,6 +155,13 @@ public class Server{
 						}
                     } catch (Exception e) {}
                 }
+				for (String group : groups.keySet()) {
+					try {
+						out.writeObject(new Message("", "",
+								group, "isUpdateGroupList"));
+
+					} catch (Exception e) {}
+				}
 			}
 
 			// Return true if is unique name, false otherwise
@@ -154,8 +177,7 @@ public class Server{
 							try {
 								out.writeObject(new Message(msg.getUsername(), "",
 										"false", "isCheckUniqueName"));
-							} catch (Exception e) {
-							}
+							} catch (Exception e) {}
 							return false;
 						}
 					}
@@ -169,8 +191,26 @@ public class Server{
 				return true;
 			}
 
+			// Return true if is unique group name, false otherwise
+			public void checkUniqueGroupName(Message msg) {
+				for (String group : groups.keySet()) {
+					if (Objects.equals(group, msg.getData())) {
+						try {
+							out.writeObject(new Message(msg.getData(), "",
+									"false", "isCheckUniqueGroupName"));
+						} catch (Exception e) {}
+						return;
+					}
+				}
+				try {
+					out.writeObject(new Message(msg.getData(), "",
+							"true", "isCheckUniqueGroupName"));
+				} catch (Exception e) {}
+			}
+
 			// Update groups
 			public void updateGroups(Message msg) {
+
 				String groupName = msg.getData();
 				// Existing group, add new member
 				if (groups.containsKey(groupName)) {
@@ -183,6 +223,27 @@ public class Server{
 					groups.put(msg.getData(), newGroupArray);
 
 					updateClients(msg.getData(), "isUpdateGroupList");
+
+					String callText = "-- A new group: " + msg.getData() + " has been created! --";
+					callback.accept(new Message("", "",
+							callText, "isInfoName" ));
+					updateClients(callText, "isInfoName");
+				}
+			}
+
+			// Update array groups in every member of the group
+			public void updateArrayGroups(String groupName) {
+				ArrayList<String> groupList = groups.get(groupName);
+				for (String friend : groupList) {
+					for (ClientThread t : clients) {
+						if (Objects.equals(t.clientThreadName, friend)) {
+							try {
+								t.out.writeObject(new Message("", "",
+										groupName, "isUpdateArrayGroups"));
+							} catch (Exception e) {}
+							break;
+						}
+					}
 				}
 			}
 
@@ -219,7 +280,7 @@ public class Server{
 					callback.accept(callMsg);
 					updateClients(textInfo, "isInfoName");
 
-					updateNewClientFriendListUptoDate();
+					updateNewClientListsUptoDate();
 					online = true;
 					updateClientsArrayLists(msg.getUsername(), "addFriend");
 
@@ -234,8 +295,15 @@ public class Server{
 
 							// Input message is notification about new group with new members
 							if (msg.isNewGroupAddMember()) {
-								System.out.println("did new roup");
 								updateGroups(msg);
+							}
+							// Input message is notification about check unique group name
+							else if (msg.isCheckUniqueGroupName()) {
+								checkUniqueGroupName(msg);
+							}
+							// Input message is notification about updating array groups
+							else if (msg.isUpdateArrayGroups()) {
+								updateArrayGroups(msg.getData());
 							}
 							else {
 								String textChat = "";
@@ -249,6 +317,12 @@ public class Server{
 									textChat = msg.getUsername() + " > [" + msg.getReceiver() +
 											"]: " + msg.getData();
 									privateSend(msg.getReceiver(), textChat);
+								}
+								// Input message is group text
+								else if (msg.isGroupText()) {
+									textChat = textChat = msg.getUsername() + " > [" + msg.getReceiver() +
+											"]: " + msg.getData();
+									groupSend(msg.getReceiver(), textChat);
 								}
 								// Send message to Gui Server
 								Message callMsg = new Message("", "",
@@ -276,7 +350,9 @@ public class Server{
 			
 			
 		}//end of client thread
-}
+
+
+}//end of server
 
 
 	
