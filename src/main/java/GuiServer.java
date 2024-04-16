@@ -58,7 +58,7 @@ public class GuiServer extends Application{
 				Text newText = new Text(msg.getData());
 				if (msg.isPrivateText() || msg.isPublicText()) {
 
-					newText.setFont(Font.font("gg sans Regular", 14));
+					newText.setFont(Font.font("gg sans Medium", 14));
 				}
 				// Callback message is a notification
 				else {
